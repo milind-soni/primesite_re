@@ -327,8 +327,20 @@ col1, col2 = st.columns(2)
 with col1:
     st.subheader("Location Selector")
     m = folium.Map(
-        location=st.session_state["map_center"], zoom_start=10, tiles="CartoDB positron"
+        location=st.session_state["map_center"],
+        zoom_start=10,
+        tiles=None,  # We'll add our custom tile layer instead
+        attr='Map tiles by <a href="https://carto.com">Carto</a>, under CC BY 3.0. Data by <a href="https://www.openstreetmap.org/">OpenStreetMap</a>, under ODbL.',
     )
+
+    # Add the Dark Matter tile layer
+    folium.TileLayer(
+        tiles="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png",
+        attr='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors',
+        name="Stadia Alidade Smooth Dark",
+        control=True,
+        overlay=False,
+    ).add_to(m)
 
     if st.session_state["marker"]:
         folium.Marker(st.session_state["marker"]).add_to(m)
