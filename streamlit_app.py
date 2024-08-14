@@ -9,13 +9,15 @@ import io
 import json
 import urllib.parse
 
-# Initialize session state for marker and API result
+# Initialize session state for marker, API result, and map center
 if "marker" not in st.session_state:
     st.session_state["marker"] = None
 if "api_result" not in st.session_state:
     st.session_state["api_result"] = None
 if "rainfall_data" not in st.session_state:
     st.session_state["rainfall_data"] = [0] * 12  # Initialize with zeros
+if "map_center" not in st.session_state:
+    st.session_state["map_center"] = [40.7128, -74.0060]  # Default to New York
 
 
 def make_api_call(lat, lon):
@@ -172,10 +174,9 @@ st.title("Twin City App")
 
 # Create two columns for side-by-side layout
 col1, col2 = st.columns(2)
-
 with col1:
     st.subheader("Folium Map")
-    m = folium.Map(location=[40.7128, -74.0060], zoom_start=10)
+    m = folium.Map(location=st.session_state["map_center"], zoom_start=10)
 
     if st.session_state["marker"]:
         folium.Marker(st.session_state["marker"]).add_to(m)
@@ -186,6 +187,7 @@ with col1:
         clicked_lat = output["last_clicked"]["lat"]
         clicked_lon = output["last_clicked"]["lng"]
         st.session_state["marker"] = (clicked_lat, clicked_lon)
+        st.session_state["map_center"] = [clicked_lat, clicked_lon]  # Update map center
 
         api_result = make_api_call(clicked_lat, clicked_lon)
         st.session_state["api_result"] = api_result
@@ -195,7 +197,6 @@ with col1:
         st.session_state["rainfall_data"] = rainfall_df["Rainfall"].tolist()
 
         st.rerun()
-
     # Display rainfall plot in column 1
     if st.session_state["marker"]:
         st.subheader("Rainfall Plot")
@@ -238,16 +239,18 @@ with col1:
 with col2:
     st.subheader("Dynamic iframe Map")
 
-    # Generate HTML content with the updated rainfall data
+    # Generate HTML content with the updated rainfall data and map center
     if st.session_state["marker"]:
         html_content = generate_html_content(
             st.session_state["rainfall_data"],
-            st.session_state["marker"][0],
-            st.session_state["marker"][1],
+            st.session_state["map_center"][0],
+            st.session_state["map_center"][1],
         )
     else:
         html_content = generate_html_content(
-            st.session_state["rainfall_data"], 40.7128, -74.0060
+            st.session_state["rainfall_data"],
+            st.session_state["map_center"][0],
+            st.session_state["map_center"][1],
         )
 
     # Encode the HTML content
