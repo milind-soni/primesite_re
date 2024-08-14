@@ -17,7 +17,7 @@ if "api_result" not in st.session_state:
 if "rainfall_data" not in st.session_state:
     st.session_state["rainfall_data"] = [0] * 12
 if "map_center" not in st.session_state:
-    st.session_state["map_center"] = [40.1028, -74.4060]  # Default to New York
+    st.session_state["map_center"] = [28.6171, 77.2168]  # Default to New York
 if "iframe_center" not in st.session_state:
     st.session_state["iframe_center"] = [40.1028, -74.4060]  # New York for iframe
 
