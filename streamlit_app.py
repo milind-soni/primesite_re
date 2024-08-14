@@ -254,7 +254,7 @@ with col1:
             st.rerun()
 
 with col2:
-    st.subheader("Dynamic iframe Map")
+    st.subheader("Hex-Similarity Map")
 
     # Generate HTML content with the updated rainfall data and fixed New York center
     html_content = generate_html_content(
