@@ -15,9 +15,57 @@ if "marker" not in st.session_state:
 if "api_result" not in st.session_state:
     st.session_state["api_result"] = None
 if "rainfall_data" not in st.session_state:
-    st.session_state["rainfall_data"] = [0] * 12  # Initialize with zeros
+    st.session_state["rainfall_data"] = [0] * 12
 if "map_center" not in st.session_state:
-    st.session_state["map_center"] = [40.7128, -74.0060]  # Default to New York
+    st.session_state["map_center"] = [40.1028, -74.4060]  # Default to New York
+if "iframe_center" not in st.session_state:
+    st.session_state["iframe_center"] = [40.1028, -74.4060]  # New York for iframe
+
+
+st.sidebar.title("Rainfall Data Editor")
+
+# Instructions
+st.sidebar.write("Edit the rainfall data below. Changes will update the map and plot.")
+
+# Create editable dataframe in sidebar
+months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+]
+rainfall_df = pd.DataFrame(
+    {"Month": months, "Rainfall": st.session_state["rainfall_data"]}
+)
+
+edited_df = st.sidebar.data_editor(
+    rainfall_df,
+    num_rows="fixed",
+    key="sidebar_rainfall_editor",
+    use_container_width=True,
+)
+
+st.session_state["rainfall_data"] = edited_df["Rainfall"].tolist()
+
+# Add a button to reset rainfall data
+if st.sidebar.button("Reset Rainfall Data"):
+    st.session_state["rainfall_data"] = [0] * 12  # Reset to initial values
+    st.experimental_rerun()
+
+
+def reset_map_and_data():
+    st.session_state["marker"] = None
+    st.session_state["api_result"] = None
+    st.session_state["rainfall_data"] = [0] * 12
+    st.session_state["map_center"] = [40.1028, -74.4060]  # Reset to default
 
 
 def make_api_call(lat, lon):
@@ -95,7 +143,7 @@ def generate_html_content(rainfall_data, center_lat, center_lon):
             const map = new mapboxgl.Map({{
                 container: 'map',
                 style: 'mapbox://styles/mapbox/dark-v10',
-                zoom: 10,
+                zoom: 7,
                 center: [{center_lon}, {center_lat}]
             }});
 
@@ -174,9 +222,12 @@ st.title("Twin City App")
 
 # Create two columns for side-by-side layout
 col1, col2 = st.columns(2)
+
 with col1:
     st.subheader("Folium Map")
-    m = folium.Map(location=st.session_state["map_center"], zoom_start=10)
+    m = folium.Map(
+        location=st.session_state["map_center"], zoom_start=10, tiles="CartoDB positron"
+    )
 
     if st.session_state["marker"]:
         folium.Marker(st.session_state["marker"]).add_to(m)
@@ -186,72 +237,31 @@ with col1:
     if output["last_clicked"]:
         clicked_lat = output["last_clicked"]["lat"]
         clicked_lon = output["last_clicked"]["lng"]
-        st.session_state["marker"] = (clicked_lat, clicked_lon)
-        st.session_state["map_center"] = [clicked_lat, clicked_lon]  # Update map center
 
-        api_result = make_api_call(clicked_lat, clicked_lon)
-        st.session_state["api_result"] = api_result
+        # Check if the clicked location is different from the current marker
+        if st.session_state["marker"] != (clicked_lat, clicked_lon):
+            reset_map_and_data()
+            st.session_state["marker"] = (clicked_lat, clicked_lon)
+            st.session_state["map_center"] = [clicked_lat, clicked_lon]
 
-        # Update rainfall_data in session state
-        rainfall_df = parse_rainfall_data(api_result)
-        st.session_state["rainfall_data"] = rainfall_df["Rainfall"].tolist()
+            api_result = make_api_call(clicked_lat, clicked_lon)
+            st.session_state["api_result"] = api_result
 
-        st.rerun()
-    # Display rainfall plot in column 1
-    if st.session_state["marker"]:
-        st.subheader("Rainfall Plot")
-        months = [
-            "Jan",
-            "Feb",
-            "Mar",
-            "Apr",
-            "May",
-            "Jun",
-            "Jul",
-            "Aug",
-            "Sep",
-            "Oct",
-            "Nov",
-            "Dec",
-        ]
-        plot_df = pd.DataFrame(
-            {"Month": months, "Rainfall": st.session_state["rainfall_data"]}
-        )
-        fig = px.bar(
-            plot_df,
-            x="Month",
-            y="Rainfall",
-            title="Monthly Rainfall for Selected Location",
-        )
-        fig.update_layout(height=300)  # Make the plot smaller
-        st.plotly_chart(fig, use_container_width=True)
+            # Update rainfall_data in session state
+            rainfall_df = parse_rainfall_data(api_result)
+            st.session_state["rainfall_data"] = rainfall_df["Rainfall"].tolist()
 
-    # Display clicked location
-    if st.session_state["marker"]:
-        st.subheader("Clicked Location")
-        lat, lon = st.session_state["marker"]
-        st.write(f"Marker: Lat {lat:.6f}, Lon {lon:.6f}")
-
-    # Display the raw output
-    st.subheader("Raw Output")
-    st.write(output)
+            st.experimental_rerun()
 
 with col2:
     st.subheader("Dynamic iframe Map")
 
-    # Generate HTML content with the updated rainfall data and map center
-    if st.session_state["marker"]:
-        html_content = generate_html_content(
-            st.session_state["rainfall_data"],
-            st.session_state["map_center"][0],
-            st.session_state["map_center"][1],
-        )
-    else:
-        html_content = generate_html_content(
-            st.session_state["rainfall_data"],
-            st.session_state["map_center"][0],
-            st.session_state["map_center"][1],
-        )
+    # Generate HTML content with the updated rainfall data and fixed New York center
+    html_content = generate_html_content(
+        st.session_state["rainfall_data"],
+        st.session_state["iframe_center"][0],
+        st.session_state["iframe_center"][1],
+    )
 
     # Encode the HTML content
     encoded_content = base64.b64encode(html_content.encode()).decode()
@@ -264,8 +274,8 @@ with col2:
         scrolling=True,
     )
 
-    # Display editable table under the iframe in column 2
-    st.subheader("Editable Rainfall Data")
+# Display rainfall plot spanning both columns
+if st.session_state["marker"]:
     months = [
         "Jan",
         "Feb",
@@ -280,11 +290,49 @@ with col2:
         "Nov",
         "Dec",
     ]
-    rainfall_df = pd.DataFrame(
+    plot_df = pd.DataFrame(
         {"Month": months, "Rainfall": st.session_state["rainfall_data"]}
     )
+    fig = px.bar(
+        plot_df,
+        x="Month",
+        y="Rainfall",
+        title="Monthly Rainfall for Selected Location",
+    )
+    fig.update_layout(height=400)  # Increased height for better visibility
+    st.plotly_chart(fig, use_container_width=True)
+# Sidebar content
+st.sidebar.title("Rainfall Data Editor")
 
-    edited_df = st.data_editor(rainfall_df, num_rows="fixed", key="rainfall_editor")
+# Instructions
+st.sidebar.write("Edit the rainfall data below. Changes will update the map and plot.")
 
-    # Update session state with edited values
-    st.session_state["rainfall_data"] = edited_df["Rainfall"].tolist()
+# Create editable dataframe in sidebar
+months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+]
+rainfall_df = pd.DataFrame(
+    {"Month": months, "Rainfall": st.session_state["rainfall_data"]}
+)
+
+# Use a unique key for the data editor
+edited_df = st.sidebar.data_editor(
+    rainfall_df,
+    num_rows="fixed",
+    key="sidebar_rainfall_editor_unique",  # Changed this line
+    use_container_width=True,
+)
+
+# Update session state with edited values
+st.session_state["rainfall_data"] = edited_df["Rainfall"].tolist()
