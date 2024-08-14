@@ -224,7 +224,7 @@ st.title("Twin City App")
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("Folium Map")
+    st.subheader("Location Selector")
     m = folium.Map(
         location=st.session_state["map_center"], zoom_start=10, tiles="CartoDB positron"
     )
