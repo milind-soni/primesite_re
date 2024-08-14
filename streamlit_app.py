@@ -335,11 +335,11 @@ with col1:
 
     # Add the Dark Matter tile layer
     folium.TileLayer(
-        tiles="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png",
-        attr='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors',
-        name="Stadia Alidade Smooth Dark",
+        tiles='https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        name='CARTO Dark Matter',
         control=True,
-        overlay=False,
+        overlay=False
     ).add_to(m)
 
     if st.session_state["marker"]:
