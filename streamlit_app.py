@@ -301,38 +301,3 @@ if st.session_state["marker"]:
     )
     fig.update_layout(height=400)  # Increased height for better visibility
     st.plotly_chart(fig, use_container_width=True)
-# Sidebar content
-st.sidebar.title("Rainfall Data Editor")
-
-# Instructions
-st.sidebar.write("Edit the rainfall data below. Changes will update the map and plot.")
-
-# Create editable dataframe in sidebar
-months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-]
-rainfall_df = pd.DataFrame(
-    {"Month": months, "Rainfall": st.session_state["rainfall_data"]}
-)
-
-# Use a unique key for the data editor
-edited_df = st.sidebar.data_editor(
-    rainfall_df,
-    num_rows="fixed",
-    key="sidebar_rainfall_editor_unique",  # Changed this line
-    use_container_width=True,
-)
-
-# Update session state with edited values
-st.session_state["rainfall_data"] = edited_df["Rainfall"].tolist()
