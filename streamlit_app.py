@@ -25,7 +25,7 @@ if "iframe_center" not in st.session_state:
 st.sidebar.title("Rainfall Data Editor")
 
 # Instructions
-st.sidebar.write("Edit the rainfall data below. Changes will update the map and plot.")
+st.sidebar.write("Mark a location on the first map to get started!")
 
 # Create editable dataframe in sidebar
 months = [
