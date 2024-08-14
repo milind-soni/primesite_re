@@ -133,12 +133,74 @@ def generate_html_content(rainfall_data, center_lat, center_lon):
                 padding: 10px;
                 border-radius: 3px;
             }}
+            #stopwatch {{
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                background: rgba(255, 255, 255, 0.8);
+                padding: 5px 10px;
+                border-radius: 3px;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+            }}
         </style>
     </head>
     <body>
         <div id="map"></div>
         <div id="legend"></div>
+        <div id="stopwatch">Loading time: 0.00s</div>
         <script>
+            let startTime;
+            let stopwatchInterval;
+            let isTimerRunning = false;
+            let tilesLoading = 0;
+            let completionTimeout;
+
+            function startStopwatch() {{
+                if (!isTimerRunning) {{
+                    console.log('Starting stopwatch');
+                    startTime = Date.now();
+                    stopwatchInterval = setInterval(updateStopwatch, 10);
+                    isTimerRunning = true;
+                    document.getElementById('stopwatch').textContent = 'Loading time: 0.00s';
+                }}
+            }}
+
+            function stopStopwatch() {{
+                if (isTimerRunning) {{
+                    console.log('Stopping stopwatch');
+                    clearInterval(stopwatchInterval);
+                    isTimerRunning = false;
+                    const finalTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                    document.getElementById('stopwatch').textContent = `Loading time: ${{finalTime}}s (Completed)`;
+                }}
+            }}
+
+            function updateStopwatch() {{
+                const elapsedTime = (Date.now() - startTime) / 1000;
+                document.getElementById('stopwatch').textContent = `Loading time: ${{elapsedTime.toFixed(2)}}s`;
+            }}
+
+            function resetAndStartStopwatch() {{
+                console.log('Resetting and starting stopwatch');
+                clearTimeout(completionTimeout);
+                if (isTimerRunning) {{
+                    clearInterval(stopwatchInterval);
+                    isTimerRunning = false;
+                }}
+                tilesLoading = 0;
+                startStopwatch();
+            }}
+
+            function scheduleStopwatch() {{
+                console.log('Scheduling stopwatch stop');
+                clearTimeout(completionTimeout);
+                completionTimeout = setTimeout(() => {{
+                    console.log('Completion timeout triggered');
+                    stopStopwatch();
+                }}, 1000);
+            }}
+
             mapboxgl.accessToken = 'pk.eyJ1IjoibWlsaW5kc29uaSIsImEiOiJjbDRjc2ZxaTgwMW5hM3Bqbmlka3VweWVkIn0.AM0QzfbGzUZc04vZ6o2uaw';
             const map = new mapboxgl.Map({{
                 container: 'map',
@@ -153,7 +215,9 @@ def generate_html_content(rainfall_data, center_lat, center_lon):
             }});
 
             const colorScale = chroma.scale(['blue','yellow', 'red']);
+            
             map.on('load', () => {{
+                console.log('Map loaded');
                 map.addSource('fused-vector-source', {{
                     'type': 'vector',
                     'tiles': [
@@ -180,6 +244,39 @@ def generate_html_content(rainfall_data, center_lat, center_lon):
                     }}
                 }});
 
+                resetAndStartStopwatch();
+
+                map.on('sourcedata', (e) => {{
+                    if (e.isSourceLoaded && e.sourceId === 'fused-vector-source') {{
+                        console.log('Source data loaded');
+                        tilesLoading = Math.max(0, tilesLoading - 1);
+                        console.log('Tiles still loading:', tilesLoading);
+                        if (tilesLoading === 0) {{
+                            scheduleStopwatch();
+                        }}
+                    }}
+                }});
+
+                map.on('dataloading', (e) => {{
+                    if (e.sourceId === 'fused-vector-source') {{
+                        console.log('Data loading started');
+                        tilesLoading++;
+                        console.log('Tiles loading:', tilesLoading);
+                        resetAndStartStopwatch();
+                    }}
+                }});
+
+                map.on('idle', () => {{
+                    console.log('Map idle');
+                    if (tilesLoading === 0 && isTimerRunning) {{
+                        scheduleStopwatch();
+                    }}
+                }});
+
+                map.on('movestart', () => {{
+                    console.log('Map move started');
+                    resetAndStartStopwatch();
+                }});
                 map.on('mousemove', 'fused-vector-layer', (e) => {{
                     if (e.features.length > 0) {{
                         const feature = e.features[0];
@@ -208,8 +305,12 @@ def generate_html_content(rainfall_data, center_lat, center_lon):
                 legend.innerHTML += '<br>Low Similarity <span style="float: right;">High Similarity</span>';
             }});
 
-            map.on('error', (e) => {{
+ 
+        
+             map.on('error', (e) => {{
                 console.error('Mapbox GL JS error:', e);
+                stopStopwatch();
+                document.getElementById('stopwatch').textContent += ' (Error)';
             }});
         </script>
     </body>
