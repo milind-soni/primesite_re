@@ -22,7 +22,7 @@ if "iframe_center" not in st.session_state:
     st.session_state["iframe_center"] = [40.1028, -74.4060]  # New York for iframe
 
 
-st.sidebar.title("Rainfall Data Editor")
+st.sidebar.title("Data Editor")
 
 # Instructions
 st.sidebar.write("Mark a location on the first map to get started!")
