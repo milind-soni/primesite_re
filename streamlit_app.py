@@ -25,7 +25,7 @@ if "iframe_center" not in st.session_state:
 st.sidebar.title("Data Editor")
 
 # Instructions
-st.sidebar.write("Mark a location on the first map to get started!")
+st.sidebar.write("Mark a location on the Location Selector map to get started!")
 
 # Create editable dataframe in sidebar
 months = [
