@@ -58,7 +58,7 @@ st.session_state["rainfall_data"] = edited_df["Rainfall"].tolist()
 # Add a button to reset rainfall data
 if st.sidebar.button("Reset Rainfall Data"):
     st.session_state["rainfall_data"] = [0] * 12  # Reset to initial values
-    st.experimental_rerun()
+    st.rerun()
 
 
 def reset_map_and_data():
