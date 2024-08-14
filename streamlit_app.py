@@ -251,7 +251,7 @@ with col1:
             rainfall_df = parse_rainfall_data(api_result)
             st.session_state["rainfall_data"] = rainfall_df["Rainfall"].tolist()
 
-            st.experimental_rerun()
+            st.rerun()
 
 with col2:
     st.subheader("Dynamic iframe Map")
