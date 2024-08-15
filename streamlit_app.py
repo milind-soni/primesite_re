@@ -11,13 +11,26 @@ import urllib.parse
 
 # Initialize session state for marker, API result, and map center
 if "marker" not in st.session_state:
-    st.session_state["marker"] = None
+    st.session_state["marker"] = [28.6139, 77.2090]  # Delhi coordinates
 if "api_result" not in st.session_state:
     st.session_state["api_result"] = None
 if "rainfall_data" not in st.session_state:
-    st.session_state["rainfall_data"] = [0] * 12
+    st.session_state["rainfall_data"] = [
+        0.0027191754325775995,
+        0.0011549210995783607,
+        0.00011694224270690993,
+        0.0000824977329505335,
+        0.0009409706391030265,
+        0.0024134019047700405,
+        0.006273084427569246,
+        0.0029774599983857838,
+        0.005402980251973707,
+        0.005980466288260085,
+        0.00010333520330429262,
+        0.0000031371390529481384,
+    ]
 if "map_center" not in st.session_state:
-    st.session_state["map_center"] = [28.6171, 77.2168]  # Default to New York
+    st.session_state["map_center"] = [28.6139, 77.2090]  # Delhi
 if "iframe_center" not in st.session_state:
     st.session_state["iframe_center"] = [40.1028, -74.4060]  # New York for iframe
 
@@ -324,16 +337,15 @@ st.title("Twin City App")
 # Create two columns for side-by-side layout
 col1, col2 = st.columns(2)
 
+
 with col1:
     st.subheader("Location Selector")
     m = folium.Map(
         location=st.session_state["map_center"],
         zoom_start=10,
-        tiles=None,  # We'll add our custom tile layer instead
-        attr='Map tiles by <a href="https://carto.com">Carto</a>, under CC BY 3.0. Data by <a href="https://www.openstreetmap.org/">OpenStreetMap</a>, under ODbL.',
+        tiles=None,
     )
 
-    # Add the Dark Matter tile layer
     folium.TileLayer(
         tiles="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
         attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
@@ -341,8 +353,9 @@ with col1:
         control=False,
         subdomains="abcd",
     ).add_to(m)
-    if st.session_state["marker"]:
-        folium.Marker(st.session_state["marker"]).add_to(m)
+
+    # Add the default marker for Delhi
+    folium.Marker(st.session_state["marker"]).add_to(m)
 
     output = st_folium(m, width=400, height=400, returned_objects=["last_clicked"])
 
@@ -350,16 +363,13 @@ with col1:
         clicked_lat = output["last_clicked"]["lat"]
         clicked_lon = output["last_clicked"]["lng"]
 
-        # Check if the clicked location is different from the current marker
-        if st.session_state["marker"] != (clicked_lat, clicked_lon):
-            reset_map_and_data()
-            st.session_state["marker"] = (clicked_lat, clicked_lon)
+        if st.session_state["marker"] != [clicked_lat, clicked_lon]:
+            st.session_state["marker"] = [clicked_lat, clicked_lon]
             st.session_state["map_center"] = [clicked_lat, clicked_lon]
 
             api_result = make_api_call(clicked_lat, clicked_lon)
             st.session_state["api_result"] = api_result
 
-            # Update rainfall_data in session state
             rainfall_df = parse_rainfall_data(api_result)
             st.session_state["rainfall_data"] = rainfall_df["Rainfall"].tolist()
 
@@ -368,17 +378,14 @@ with col1:
 with col2:
     st.subheader("Hex-Similarity Map")
 
-    # Generate HTML content with the updated rainfall data and fixed New York center
     html_content = generate_html_content(
         st.session_state["rainfall_data"],
         st.session_state["iframe_center"][0],
         st.session_state["iframe_center"][1],
     )
 
-    # Encode the HTML content
     encoded_content = base64.b64encode(html_content.encode()).decode()
 
-    # Display the iframe with the dynamically generated content
     st.components.v1.iframe(
         f"data:text/html;base64,{encoded_content}",
         width=400,
@@ -386,30 +393,27 @@ with col2:
         scrolling=True,
     )
 
-# Display rainfall plot spanning both columns
-if st.session_state["marker"]:
-    months = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-    ]
-    plot_df = pd.DataFrame(
-        {"Month": months, "Rainfall": st.session_state["rainfall_data"]}
-    )
-    fig = px.bar(
-        plot_df,
-        x="Month",
-        y="Rainfall",
-        title="Monthly Rainfall for Selected Location",
-    )
-    fig.update_layout(height=400)  # Increased height for better visibility
-    st.plotly_chart(fig, use_container_width=True)
+# Display rainfall plot
+months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+]
+plot_df = pd.DataFrame({"Month": months, "Rainfall": st.session_state["rainfall_data"]})
+fig = px.bar(
+    plot_df,
+    x="Month",
+    y="Rainfall",
+    title="Monthly Rainfall for Selected Location",
+)
+fig.update_layout(height=400)
+st.plotly_chart(fig, use_container_width=True)
