@@ -22,10 +22,10 @@ if "iframe_center" not in st.session_state:
     st.session_state["iframe_center"] = [40.1028, -74.4060]  # New York for iframe
 
 
-st.sidebar.title("Data Editor")
+st.sidebar.title("Rainfall Data Editor")
 
 # Instructions
-st.sidebar.write("Mark a location on the Location Selector map to get started!")
+st.sidebar.write("Edit the rainfall data below. Changes will update the map and plot.")
 
 # Create editable dataframe in sidebar
 months = [
@@ -223,7 +223,7 @@ def generate_html_content(rainfall_data, center_lat, center_lon):
                     'tiles': [
                         'https://www.fused.io/server/v1/realtime-shared/fsh_LfRybzrLngj3vZEHvBRDe/run/tiles/{{z}}/{{x}}/{{y}}?dtype_out_vector=mvt&input_array={rainfall_array_encoded}'
                     ],
-                    'minzoom': 3,
+                    'minzoom': 6,
                     'maxzoom': 14
                 }});
 
@@ -335,13 +335,12 @@ with col1:
 
     # Add the Dark Matter tile layer
     folium.TileLayer(
-        tiles='https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        tiles="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
         attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        name='CARTO Dark Matter',
-        control=True,
-        overlay=False
+        name="Dark Matter",
+        control=False,
+        subdomains="abcd",
     ).add_to(m)
-
     if st.session_state["marker"]:
         folium.Marker(st.session_state["marker"]).add_to(m)
 
