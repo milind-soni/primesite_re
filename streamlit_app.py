@@ -223,7 +223,7 @@ def generate_html_content(rainfall_data, center_lat, center_lon):
                     'tiles': [
                         'https://www.fused.io/server/v1/realtime-shared/fsh_LfRybzrLngj3vZEHvBRDe/run/tiles/{{z}}/{{x}}/{{y}}?dtype_out_vector=mvt&input_array={rainfall_array_encoded}'
                     ],
-                    'minzoom': 6,
+                    'minzoom': 3,
                     'maxzoom': 14
                 }});
 
