@@ -16,18 +16,18 @@ if "api_result" not in st.session_state:
     st.session_state["api_result"] = None
 if "rainfall_data" not in st.session_state:
     st.session_state["rainfall_data"] = [
-        0.0027191754325775995,
-        0.0011549210995783607,
-        0.00011694224270690993,
-        0.0000824977329505335,
-        0.0009409706391030265,
-        0.0024134019047700405,
-        0.006273084427569246,
-        0.0029774599983857838,
-        0.005402980251973707,
-        0.005980466288260085,
-        0.00010333520330429262,
-        0.0000031371390529481384,
+        2.7715942327085665,
+        0.7863158647851064,
+        0.12182573777622914,
+        0.06965268364875025,
+        0.7598821146230067,
+        2.4584453831794897,
+        6.331687329766313,
+        2.96728587006872,
+        4.837692532803455,
+        5.647026369003688,
+        0.14140295145352866,
+        0.003789064855178973,
     ]
 if "map_center" not in st.session_state:
     st.session_state["map_center"] = [28.6139, 77.2090]  # Delhi
@@ -82,7 +82,7 @@ def reset_map_and_data():
 
 
 def make_api_call(lat, lon):
-    url = f"https://www.fused.io/server/v1/realtime-shared/fsh_3Ow5rXA7mNdewmdDEHgEQm/run/file"
+    url = f"https://www.fused.io/server/v1/realtime-shared/fsh_3w7IJbltI8eSVQMXZmUptj/run/file"  # PROD3__xarray_gee_latlng_to_vec3_experimental , PROD2_with_gdf_optimised_12_aug
     params = {
         "dtype_out_raster": "png",
         "dtype_out_vector": "csv",
@@ -417,4 +417,3 @@ fig = px.bar(
 )
 fig.update_layout(height=400)
 st.plotly_chart(fig, use_container_width=True)
- 
