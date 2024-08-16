@@ -5,11 +5,13 @@ import base64
 import requests
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import io
 import json
 import urllib.parse
+from folium.plugins import MiniMap
 
-# Initialize session state for marker, API result, and map center
+# Initialize session state variables
 if "marker" not in st.session_state:
     st.session_state["marker"] = [28.6139, 77.2090]  # Delhi coordinates
 if "api_result" not in st.session_state:
@@ -35,12 +37,8 @@ if "iframe_center" not in st.session_state:
     st.session_state["iframe_center"] = [40.1028, -74.4060]  # New York for iframe
 
 
-st.sidebar.title("Rainfall Data Editor")
-
-# Instructions
-st.sidebar.write("Edit the rainfall data below. Changes will update the map and plot.")
-
-# Create editable dataframe in sidebar
+st.set_page_config(layout="wide")  # Use wide layout to maximize space
+# Define months
 months = [
     "Jan",
     "Feb",
@@ -55,25 +53,16 @@ months = [
     "Nov",
     "Dec",
 ]
-rainfall_df = pd.DataFrame(
-    {"Month": months, "Rainfall": st.session_state["rainfall_data"]}
-)
 
-edited_df = st.sidebar.data_editor(
-    rainfall_df,
-    num_rows="fixed",
-    key="sidebar_rainfall_editor",
-    use_container_width=True,
-)
-
-st.session_state["rainfall_data"] = edited_df["Rainfall"].tolist()
-
-# Add a button to reset rainfall data
-if st.sidebar.button("Reset Rainfall Data"):
-    st.session_state["rainfall_data"] = [0] * 12  # Reset to initial values
-    st.rerun()
+PRIMARY_COLOR = "#430f8e"
+SECONDARY_COLOR = "#950f3b"
+TERTIARY_COLOR = "#9f0d30"
+QUATERNARY_COLOR = "#620f6f"
+BG_COLOR = "#2E0A3A"
+TEXT_COLOR = "#E6D9F2"
 
 
+# Function to reset map and data
 def reset_map_and_data():
     st.session_state["marker"] = None
     st.session_state["api_result"] = None
@@ -81,8 +70,9 @@ def reset_map_and_data():
     st.session_state["map_center"] = [40.1028, -74.4060]  # Reset to default
 
 
+# Function to make API call
 def make_api_call(lat, lon):
-    url = f"https://www.fused.io/server/v1/realtime-shared/fsh_3w7IJbltI8eSVQMXZmUptj/run/file"  # PROD3__xarray_gee_latlng_to_vec3_experimental , PROD2_with_gdf_optimised_12_aug
+    url = f"https://www.fused.io/server/v1/realtime-shared/fsh_3w7IJbltI8eSVQMXZmUptj/run/file"
     params = {
         "dtype_out_raster": "png",
         "dtype_out_vector": "csv",
@@ -96,24 +86,11 @@ def make_api_call(lat, lon):
         return f"Error: {response.status_code}"
 
 
+# Function to parse rainfall data
 def parse_rainfall_data(api_result):
     csv_data = io.StringIO(api_result.decode("utf-8"))
     df = pd.read_csv(csv_data)
     rainfall_data = eval(df["rainfall"].iloc[0])
-    months = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-    ]
     return pd.DataFrame({"Month": months, "Rainfall": rainfall_data})
 
 
@@ -332,88 +309,145 @@ def generate_html_content(rainfall_data, center_lat, center_lon):
     return html_content
 
 
+@st.dialog("Edit Rainfall Data")
+def edit_rainfall_data():
+    st.write("Edit the rainfall data below. Changes will update the map and plot.")
+
+    rainfall_df = pd.DataFrame(
+        {"Month": months, "Rainfall": st.session_state["rainfall_data"]}
+    )
+
+    edited_df = st.data_editor(
+        rainfall_df,
+        num_rows="fixed",
+        key="modal_rainfall_editor",
+        use_container_width=True,
+    )
+
+    if st.button("Apply Changes"):
+        st.session_state["rainfall_data"] = edited_df["Rainfall"].tolist()
+        st.rerun()
+
+    if st.button("Reset Rainfall Data"):
+        st.session_state["rainfall_data"] = [0] * 12  # Reset to initial values
+        st.rerun()
+
+
+# Main app
 st.title("Twin City App")
 
-# Create two columns for side-by-side layout
-col1, col2 = st.columns(2)
+# Create a container for the upper half of the page
+upper_container = st.container()
 
+with upper_container:
+    col1, col2 = st.columns([3, 2])  # Adjust column ratio for better space utilization
 
-with col1:
-    st.subheader("Location Selector")
-    m = folium.Map(
-        location=st.session_state["map_center"],
-        zoom_start=10,
-        tiles=None,
-    )
+    with col1:
+        st.subheader("Location Selector")
+        m = folium.Map(
+            location=st.session_state["map_center"],
+            zoom_start=10,
+            tiles=None,
+        )
 
-    folium.TileLayer(
-        tiles="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-        attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        name="Dark Matter",
-        control=False,
-        subdomains="abcd",
-    ).add_to(m)
+        minimap = MiniMap(
+            tile_layer=folium.TileLayer(
+                tiles="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains="abcd",
+            ),
+            zoom_level_offset=-8,
+            width=150,
+            height=150,
+        )
+        m.add_child(minimap)
+        folium.TileLayer(
+            tiles="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+            attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            name="Dark Matter",
+            control=False,
+            subdomains="abcd",
+        ).add_to(m)
 
-    # Add the default marker for Delhi
-    folium.Marker(st.session_state["marker"]).add_to(m)
+        # Add the default marker for Delhi
+        folium.Marker(st.session_state["marker"]).add_to(m)
 
-    output = st_folium(m, width=400, height=400, returned_objects=["last_clicked"])
+        output = st_folium(m, width=None, height=400, returned_objects=["last_clicked"])
 
-    if output["last_clicked"]:
-        clicked_lat = output["last_clicked"]["lat"]
-        clicked_lon = output["last_clicked"]["lng"]
+        if output["last_clicked"]:
+            clicked_lat = output["last_clicked"]["lat"]
+            clicked_lon = output["last_clicked"]["lng"]
 
-        if st.session_state["marker"] != [clicked_lat, clicked_lon]:
-            st.session_state["marker"] = [clicked_lat, clicked_lon]
-            st.session_state["map_center"] = [clicked_lat, clicked_lon]
+            if st.session_state["marker"] != [clicked_lat, clicked_lon]:
+                st.session_state["marker"] = [clicked_lat, clicked_lon]
+                st.session_state["map_center"] = [clicked_lat, clicked_lon]
 
-            api_result = make_api_call(clicked_lat, clicked_lon)
-            st.session_state["api_result"] = api_result
+                api_result = make_api_call(clicked_lat, clicked_lon)
+                st.session_state["api_result"] = api_result
 
-            rainfall_df = parse_rainfall_data(api_result)
-            st.session_state["rainfall_data"] = rainfall_df["Rainfall"].tolist()
+                rainfall_df = parse_rainfall_data(api_result)
+                st.session_state["rainfall_data"] = rainfall_df["Rainfall"].tolist()
 
-            st.rerun()
+                st.rerun()
 
-with col2:
-    st.subheader("Hex-Similarity Map")
+    with col2:
+        st.subheader("Parameter Selection 📊")
+        parameter = st.selectbox("Select Parameter", ["Precipitation"])
 
-    html_content = generate_html_content(
-        st.session_state["rainfall_data"],
-        st.session_state["iframe_center"][0],
-        st.session_state["iframe_center"][1],
-    )
+        # Display enhanced rainfall plot with custom color scheme
+        plot_df = pd.DataFrame(
+            {"Month": months, "Rainfall": st.session_state["rainfall_data"]}
+        )
 
-    encoded_content = base64.b64encode(html_content.encode()).decode()
+        fig = go.Figure()
+        fig.add_trace(
+            go.Bar(
+                x=plot_df["Month"],
+                y=plot_df["Rainfall"],
+                marker_color=plot_df["Rainfall"],
+                marker_colorscale=[
+                    PRIMARY_COLOR,
+                    QUATERNARY_COLOR,
+                    SECONDARY_COLOR,
+                    TERTIARY_COLOR,
+                ],
+            )
+        )
 
-    st.components.v1.iframe(
-        f"data:text/html;base64,{encoded_content}",
-        width=400,
-        height=400,
-        scrolling=True,
-    )
+        fig.update_layout(
+            title="Monthly Rainfall for Selected Location",
+            xaxis_title="Month",
+            yaxis_title="Rainfall (mm)",
+            font=dict(color=TEXT_COLOR),
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            height=350,
+        )
 
-# Display rainfall plot
-months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-]
-plot_df = pd.DataFrame({"Month": months, "Rainfall": st.session_state["rainfall_data"]})
-fig = px.bar(
-    plot_df,
-    x="Month",
-    y="Rainfall",
-    title="Monthly Rainfall for Selected Location",
+        fig.update_xaxes(showgrid=False, tickfont=dict(color=TEXT_COLOR))
+        fig.update_yaxes(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor="rgba(230,217,242,0.1)",
+            tickfont=dict(color=TEXT_COLOR),
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+# Full-width container for the iframe map
+st.subheader("Hex-Similarity Map")
+html_content = generate_html_content(
+    st.session_state["rainfall_data"],
+    st.session_state["iframe_center"][0],
+    st.session_state["iframe_center"][1],
 )
-fig.update_layout(height=400)
-st.plotly_chart(fig, use_container_width=True)
+encoded_content = base64.b64encode(html_content.encode()).decode()
+st.components.v1.iframe(
+    f"data:text/html;base64,{encoded_content}",
+    width=None,  # Use full width
+    height=600,
+    scrolling=True,
+)
+
+# Button to open the modal
+st.button("Edit Rainfall Data", on_click=edit_rainfall_data)
