@@ -72,8 +72,12 @@ if "census_data" not in st.session_state:
 if "map_center" not in st.session_state:
     st.session_state["map_center"] = [40.7128, -74.0060]  # New York
 if "iframe_center" not in st.session_state:
-    st.session_state["iframe_center"] = [40.7128, -74.0060]  # New York for iframe
-
+    st.session_state["iframe_center"] = [
+        47.068623358240856,
+        -122.30586442765583,
+    ]  # New York for iframe
+# 44.00467058230901, -120.12475319498472 oregon
+# 47.068623358240856, -122.30586442765583
 census_labels = {
     "B01001_E001": "Total",
     "B01001_E002": "Male",
@@ -129,12 +133,14 @@ census_labels = {
 
 st.set_page_config(layout="wide")  # Use wide layout to maximize space
 
-PRIMARY_COLOR = "#430f8e"
-SECONDARY_COLOR = "#950f3b"
-TERTIARY_COLOR = "#9f0d30"
-QUATERNARY_COLOR = "#620f6f"
-BG_COLOR = "#2E0A3A"
-TEXT_COLOR = "#E6D9F2"
+BAR_COLOR_SCALE = [
+    [0, "#1a1a1a"],  # Dark grey
+    [0.25, "#4d4d4d"],  # Medium dark grey
+    [0.5, "#808080"],  # Medium grey
+    [0.75, "#b3b3b3"],  # Light grey
+    [1, "#e6e6e6"],  # Very light grey
+]
+TEXT_COLOR = "#b3b3b3"  # Dark grey text
 
 
 # Function to reset map and data
@@ -221,15 +227,13 @@ def generate_html_content(census_data, center_lat, center_lon):
             }});
 
             const colorScale = chroma.scale([
-                '#67001f',  // Dark red
-                '#d6604d',  // Light red
-                '#fddbc7',  // Light pink
-                '#f7f7f7',  // White
-                '#d1e5f0',  // Light blue
-                '#4393c3',  // Medium blue
-                '#053061'   // Dark blue
-            ]).domain([0, 0.16, 0.33, 0.5, 0.67, 0.84, 1]);
-            
+                '#FF0000',  // Red for lowest similarity
+                '#FF7F00',  // Orange
+                '#FFFF00',  // Yellow
+                '#00FF00',  // Green
+                '#0080FF',  // Light blue
+                '#0000FF'   // Dark blue for highest similarity
+            ]).mode('lch').domain([0, 0.2, 0.4, 0.6, 0.8, 1]);
             
             map.on('load', () => {{
                 map.addSource('fused-vector-source', {{
@@ -281,7 +285,7 @@ def generate_html_content(census_data, center_lat, center_lon):
                 }});
 
                 const legend = document.getElementById('legend');
-                const gradientSteps = 5;
+                const gradientSteps = 6;
                 for (let i = 0; i <= gradientSteps; i++) {{
                     const step = i / gradientSteps;
                     const color = colorScale(step).hex();
@@ -389,56 +393,77 @@ with col1:
     # Display current marker location
     st.write(f"Current marker: {st.session_state['marker']}")
 
-    with col2:
-        st.subheader("Census Data Visualization 📊")
+with col2:
+    st.subheader("Census Data Visualization 📊")
 
-        # Display enhanced census data plot with custom color scheme
-        census_labels = [f"B01001_E{str(i).zfill(3)}" for i in range(1, 50)]
-        plot_df = pd.DataFrame(
-            {"Label": census_labels, "Value": st.session_state["census_data"]}
+    # Display enhanced census data plot with grey color scheme and new labels
+    plot_df = pd.DataFrame(
+        {
+            "Label": [
+                census_labels.get(
+                    f"B01001_E{str(i).zfill(3)}", f"B01001_E{str(i).zfill(3)}"
+                )
+                for i in range(1, 50)
+            ],
+            "Value": st.session_state["census_data"],
+        }
+    )
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=plot_df["Label"],
+            y=plot_df["Value"],
+            marker_color=plot_df["Value"],
+            marker_colorscale=BAR_COLOR_SCALE,
         )
+    )
 
-        fig = go.Figure()
-        fig.add_trace(
-            go.Bar(
-                x=plot_df["Label"],
-                y=plot_df["Value"],
-                marker_color=plot_df["Value"],
-                marker_colorscale=[
-                    PRIMARY_COLOR,
-                    QUATERNARY_COLOR,
-                    SECONDARY_COLOR,
-                    TERTIARY_COLOR,
-                ],
-            )
-        )
-
-        fig.update_layout(
-            title="Census Data for Selected Location",
-            xaxis_title="Census Variable",
-            yaxis_title="Value",
-            font=dict(color=TEXT_COLOR),
-            plot_bgcolor="rgba(0,0,0,0)",
-            paper_bgcolor="rgba(0,0,0,0)",
-            height=350,
-        )
-
-        fig.update_xaxes(
-            showgrid=False,
-            tickfont=dict(color=TEXT_COLOR),
+    fig.update_layout(
+        title="Population Distribution by Age and Sex",
+        title_font_color=TEXT_COLOR,
+        xaxis_title="Age Group",
+        yaxis_title="Population Count",
+        font=dict(color=TEXT_COLOR),
+        plot_bgcolor="rgba(0,0,0,0)",  # Transparent plot background
+        paper_bgcolor="rgba(0,0,0,0)",  # Transparent paper background
+        height=500,
+        width=1200,
+        margin=dict(l=50, r=50, t=50, b=100),
+        xaxis=dict(
+            rangeslider=dict(visible=True),
             tickangle=45,
-            tickmode="array",
-            tickvals=plot_df["Label"][::5],
-            ticktext=plot_df["Label"][::5],
-        )
-        fig.update_yaxes(
-            showgrid=True,
-            gridwidth=1,
-            gridcolor="rgba(230,217,242,0.1)",
-            tickfont=dict(color=TEXT_COLOR),
-        )
+            tickfont=dict(size=10),
+        ),
+    )
 
-        st.plotly_chart(fig, use_container_width=True)
+    fig.update_xaxes(
+        showgrid=False,
+        tickfont=dict(color=TEXT_COLOR),
+    )
+
+    fig.update_yaxes(
+        showgrid=True,
+        gridwidth=1,
+        gridcolor="rgba(0,0,0,0.1)",  # Light grey grid
+        tickfont=dict(color=TEXT_COLOR),
+    )
+
+    # Use st.plotly_chart with use_container_width=False to allow horizontal scrolling
+    st.plotly_chart(fig, use_container_width=False)
+
+    # Add custom CSS to make the chart container scrollable
+    st.markdown(
+        """
+        <style>
+        .stPlotlyChart {
+            width: 100%;
+            overflow-x: auto;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 # Full-width container for the iframe map
 st.subheader("Hex-Similarity Map")
